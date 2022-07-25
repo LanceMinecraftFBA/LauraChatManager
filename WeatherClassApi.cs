@@ -7,7 +7,7 @@ namespace WeatherApiClass
 {
     public class WeatherApi
     {
-        public static string api_token = "99f1bc7dcba0b7cc756a08c5ba31cc98";
+        public static string api_token = "token_from_openweather";
         public string inputCityName;
         public static string nameCity;
         internal static float temperatureCity;
