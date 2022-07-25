@@ -33,7 +33,7 @@ namespace Laura_Bot_Chat_Manager
         public static string Username { get; set; }
         public long Id { get; set; }
         private static User user;
-        static SqlConnection sql = new SqlConnection(connectionString: "DataBase not created");
+        static SqlConnection sql = new SqlConnection(connectionString: "DataBase not created!");
         static BotCommand command;
         private static ChatPermissions ChatPermissions;
 
@@ -47,7 +47,7 @@ namespace Laura_Bot_Chat_Manager
             Console.WriteLine("Бот Лаура запущен!");
             Console.WriteLine("===============================");
             Console.WriteLine("Bot Developed on C#\nDev: @LanceMinecarft,\n@TheShadow_hk (Telegram)");
-            Console.WriteLine("Version: 0.6.9 closed alpha");
+            Console.WriteLine("Version: 0.7.1 closed alpha");
             Console.WriteLine("===============================");
             Console.WriteLine($"Time of start: {DateTime.Now}");
             Console.WriteLine("Begin of console log:");
@@ -104,7 +104,7 @@ namespace Laura_Bot_Chat_Manager
                     Console.WriteLine($"{DateTime.Now} New Message from ID{msg.Chat.Id}, it's message: {msg.Text}");
 
                     //Logchat (FOR DEVELOPERS!!!!)
-                    var LogChat = -763013536; //set chat id for log if you developer or delete lines 106-129 if you don't want using log chat
+                    var LogChat = -763013536; //set chat id for log if you developer or delete lines 111-134 if you don't want using log chat
                     if (msg.From.Username == null)
                     {
                         if (msg.Chat.Id == msg.From.Id)
@@ -128,61 +128,506 @@ namespace Laura_Bot_Chat_Manager
                         }
                     }
 
-                    //RP commands/admin's commands(Code optimization soon)
+                    //start command & help command
+                    if (msg.Text.StartsWith("/start"))
+                    {
+                        if (msg.Chat.Id != msg.From.Id)
+                        {
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"Здравствуйте, я чат-менеджер бот Лаура!\nНапишите 👉/help, чтобы получить список команд.");
+                            BotCommand[] botCommands = { new() { Command = "start", Description = "Обновить список команд" }, new() { Command = "help", Description = "Получить справочник по использованию бота" }, new() { Command = "getchatid", Description = "Получить ID данного чата" }, new() { Command = "nightmode", Description = "Включить ночной режим в чате" }, new() { Command = "statemode", Description = "Вернуть чат в штатный режим" } };
+                            await client.SetMyCommandsAsync(botCommands);
+                            await client.GetMyCommandsAsync();
+                            await client.SetMyCommandsAsync(botCommands);
+                            Console.WriteLine($"Bot was started in chat: ID{msg.Chat.Id}");
+                            return;
+                        }
+                        else
+                        {
+                            BotCommand[] botCommands = { new() { Command = "start", Description = "Обновить список команд" }, new() { Command = "getmyid", Description = "Получить свой личный ID" } };
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"Здравствуйте, я чат-менеджер бот Лаура!\nНажмите на кнопку👉«Инструкция📚», чтобы получить список команд.");
+                            await client.SetMyCommandsAsync(botCommands);
+                            await client.GetMyCommandsAsync();
+                            await client.SetMyCommandsAsync(botCommands);
+                            Console.WriteLine($"Bot was started in chat: ID{msg.Chat.Id}");
+                            return;
+                        }
+                    }
+
+                    if (msg.Text.StartsWith("/help"))
+                    {
+                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, "<b>Внимание!\nВ инструкции пока что лежат не все команды, так как бот ещё в разработке!\n</b><a href = \"https://telegra.ph/Polnyj-spisok-komand-bota-Laura-06-21\">Инструкция</a>", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                        return;
+                    }
+                    
+                    //Admins Commands
+                    if (msg.Text.ToUpper() == "БАН")
+                    {
+                        {
+                            if (msg.Chat.Id == msg.From.Id)
+                            {
+                                return;
+                            }
+                            else if (msg.ReplyToMessage == null)
+                            {
+                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, "⛔Вы не указали пользователя!");
+                                return;
+                            }
+                            else if (msg.ReplyToMessage.From.IsBot)
+                            {
+                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"@{msg.ReplyToMessage.From.Username} является ботом🤖!");
+                                return;
+                            }
+                            else if (msg.ReplyToMessage != null)
+                            {
+
+
+                                Telegram.Bot.Types.ChatMember[] admins = await client.GetChatAdministratorsAsync(chatId: msg.Chat.Id);
+                                bool IsAdmin = admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) != null;
+                                var MemberOutput = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.From.Id);
+                                var MemberTarget = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.ReplyToMessage.From.Id);
+                                if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) == null)
+                                {
+                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                    return;
+                                }
+                                else if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.ReplyToMessage.From.Id; }) != null)
+                                {
+                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> является администратором чата «{msg.Chat.Title}»", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                    return;
+
+                                }
+                                else
+                                {
+                                    await client.KickChatMemberAsync(userId: msg.ReplyToMessage.From.Id, chatId: msg.Chat.Id, cancellationToken: default);
+                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❌Участник <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> был забанен модератором:<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                    return;
+                                }
+                            }
+                            return;
+                        }
+                    }
+
+                    if (msg.Text.ToUpper() == "РАЗБАН")
+                    {
+                        {
+                            if (msg.Chat.Id == msg.From.Id)
+                            {
+                                return;
+                            }
+
+                            else if (msg.ReplyToMessage.From.IsBot)
+                            {
+                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"@{msg.ReplyToMessage.From.Username} является ботом🤖!");
+                                return;
+                            }
+
+                            else if (msg.ReplyToMessage == null)
+                            {
+                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, "⛔Вы не указали пользователя!");
+                                return;
+                            }
+                            else if (msg.ReplyToMessage != null)
+                            {
+                                Telegram.Bot.Types.ChatMember[] admins = await client.GetChatAdministratorsAsync(chatId: msg.Chat.Id);
+                                bool IsAdmin = admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) != null;
+                                var MemberOutput = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.From.Id);
+                                var MemberTarget = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.ReplyToMessage.From.Id);
+                                if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) == null)
+                                {
+                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                    return;
+                                }
+                                else if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.ReplyToMessage.From.Id; }) != null)
+                                {
+                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> является администратором чата «{msg.Chat.Title}»", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                    return;
+                                }
+                                else if (MemberTarget.Status != Banned)
+                                {
+                                    if (msg.ReplyToMessage.From.Username == null)
+                                    {
+                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> не находиться в чёрном списке😕!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                        return;
+                                    }
+                                }
+                                else
+                                {
+                                    await client.UnbanChatMemberAsync(userId: msg.ReplyToMessage.From.Id, chatId: msg.Chat.Id, cancellationToken: default);
+                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"✅Участник <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> был разбанен модератором <a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>»!\nТеперь его можно вернуть в чат🤗.", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                    return;
+                                }
+                            }
+                            return;
+                        }
+                    }
+
+                    if (msg.Text.ToUpper() == "РАЗМУТ")
+                    {
+                        if (msg.Chat.Id == msg.From.Id)
+                        {
+                            return;
+                        }
+
+                        else if (msg.ReplyToMessage.From.IsBot)
+                        {
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"@{msg.ReplyToMessage.From.Username} является ботом🤖!");
+                            return;
+                        }
+
+                        else if (msg.ReplyToMessage == null)
+                        {
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, "⛔Вы не указали пользователя!");
+                            return;
+                        }
+                        else if (msg.ReplyToMessage != null)
+                        {
+                            Telegram.Bot.Types.ChatMember[] admins = await client.GetChatAdministratorsAsync(chatId: msg.Chat.Id);
+                            bool IsAdmin = admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) != null;
+                            var MemberOutput = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.From.Id);
+                            var MemberTarget = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.ReplyToMessage.From.Id);
+                            if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) == null)
+                            {
+                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                return;
+                            }
+                            else if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.ReplyToMessage.From.Id; }) != null)
+                            {
+                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> является администратором чата «{msg.Chat.Title}»", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                return;
+                            }
+                            else if (MemberTarget.Status != ChatMemberStatus.Restricted)
+                            {
+                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> не был заглушен😐!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                return;
+                            }
+                            else
+                            {
+                                await client.PromoteChatMemberAsync(userId: msg.ReplyToMessage.From.Id, chatId: msg.Chat.Id, cancellationToken: default);
+                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"✅Участник <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> теперь может общаться!\n\nТолько лучше следить за своим языком и не разжигать ссоры😊.\nМодератор: <a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>»", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                return;
+                            }
+                        }
+                        return;
+                    }
+
+                    if (msg.Text.ToUpper() == "МУТ")
+                    {
+                        if (msg.Chat.Id == msg.From.Id)
+                        {
+                            return;
+                        }
+                        else if (msg.ReplyToMessage == null)
+                        {
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, "⛔Вы не указали пользователя!");
+                            return;
+                        }
+                        else if (msg.ReplyToMessage.From.IsBot)
+                        {
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"@{msg.ReplyToMessage.From.Username} является ботом🤖!");
+                            return;
+                        }
+
+                        else if (msg.ReplyToMessage != null)
+                        {
+                            Telegram.Bot.Types.ChatMember[] admins = await client.GetChatAdministratorsAsync(chatId: msg.Chat.Id);
+                            bool isAdmin = admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) != null;
+                            var MemberOutput = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.From.Id);
+                            var MemberTarget = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.ReplyToMessage.From.Id);
+                            if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) == null)
+                            {
+                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                return;
+                            }
+                            else if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.ReplyToMessage.From.Id; }) != null)
+                            {
+                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> является администратором чата «{msg.Chat.Title}»", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                return;
+                            }
+                            else if (MemberTarget.Status == ChatMemberStatus.Restricted)
+                            {
+                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> уже был заглушен📛!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                return;
+                            }
+                            else
+                            {
+                                await client.RestrictChatMemberAsync(chatId: msg.Chat.Id, userId: msg.ReplyToMessage.From.Id, untilDate: DateTime.Now.AddMinutes(15), permissions: new ChatPermissions { CanSendMessages = false, CanSendMediaMessages = false, CanSendOtherMessages = false });
+                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> был заглушен на 15 минут!\nМодератор: <a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>»", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                return;
+                            }
+                        }
+                        return;
+                    }
+
+                    if (msg.Text.StartsWith("/nightmode"))
+                    {
+                        if (msg.Chat.Id == msg.From.Id)
+                        {
+                            return;
+                        }
+
+                        else if (msg.Chat.Id != msg.From.Id)
+                        {
+                            Telegram.Bot.Types.ChatMember[] admins = await client.GetChatAdministratorsAsync(chatId: msg.Chat.Id);
+                            bool IsAdmin = admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) != null;
+                            var MemberOutput = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.From.Id);
+                            if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) == null)
+                            {
+                                if (msg.From.Username == null)
+                                {
+                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                    return;
+                                }
+                                else
+                                {
+                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                await client.SetChatPermissionsAsync(chatId: msg.Chat.Id, permissions: new ChatPermissions { CanSendMessages = false, CanSendMediaMessages = false, CanSendOtherMessages = false });
+                                if (msg.From.Username == null)
+                                {
+                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a> объявляет ночной режим🤫!", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                                    return;
+                                }
+                                else
+                                {
+                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a> объявляет ночной режим🤫!", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                                }
+                                return;
+                            }
+                        }
+                        return;
+                    }
+
+                    if (msg.Text.StartsWith("/statemode"))
+                    {
+                        if (msg.Chat.Id == msg.From.Id)
+                        {
+                            return;
+                        }
+
+                        else if (msg.Chat.Id != msg.From.Id)
+                        {
+                            Telegram.Bot.Types.ChatMember[] admins = await client.GetChatAdministratorsAsync(chatId: msg.Chat.Id);
+                            bool IsAdmin = admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) != null;
+                            var MemberOutput = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.From.Id);
+                            if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) == null)
+                            {
+                                if (msg.From.Username == null)
+                                {
+                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                    return;
+                                }
+                                else
+                                {
+                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!", disableWebPagePreview: true, parseMode: ParseMode.Html);
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                await client.SetChatPermissionsAsync(chatId: msg.Chat.Id, permissions: new ChatPermissions { CanSendMessages = true, CanSendMediaMessages = true, CanSendOtherMessages = true, CanAddWebPagePreviews = true });
+                                if (msg.From.Username == null)
+                                {
+                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a> возвращает чат в штатный режим✅", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                                    return;
+                                }
+                                else
+                                {
+                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a> возвращает чат в штатный режим✅", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                                }
+                            }
+                        }
+                        return;
+                    }
+
+
+
+                    //RP commands
+                    if (msg.Text.StartsWith("+"))
+                    {
+                        {
+                            if (msg.Chat.Id == msg.From.Id)
+                            {
+                                return;
+                            }
+                            else if (msg.ReplyToMessage == null)
+                            {
+                                return;
+                            }
+                            else if (msg.ReplyToMessage != null)
+                            {
+                                if (msg.ReplyToMessage.From.Id == msg.From.Id)
+                                {
+                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, а у вас, как я вижу, высокая самооценка😏", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                                    return;
+                                }
+                                else
+                                {
+                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a> соглашается с участником <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a>✅", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                                    return;
+                                }
+                            }
+                            return;
+                        }
+                    }
+
+                    if (msg.Text.StartsWith("-"))
+                    {
+                        {
+                            if (msg.Chat.Id == msg.From.Id)
+                            {
+                                return;
+                            }
+                            else if (msg.ReplyToMessage == null)
+                            {
+                                return;
+                            }
+                            else if (msg.ReplyToMessage != null)
+                            {
+                                if (msg.ReplyToMessage.From.Id == msg.From.Id)
+                                {
+                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, зачем себя так унижать😕", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                                    return;
+                                }
+                                else
+                                {
+                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a> не соглашается с участником <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a>💢", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                                    return;
+                                }
+                            }
+                            return;
+                        }
+                    }
+
+
+                    if (msg.Text.ToUpper() == "ОБНЯТЬ")
+                    {
+                        if (msg.Chat.Id == msg.From.Id)
+                        {
+                            return;
+                        }
+                        else if (msg.ReplyToMessage == null)
+                        {
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName}</a> обнял себя🤗", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                            return;
+                        }
+                        else
+                        {
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id{msg.From.Id}\">{msg.From.FirstName}</a> обнял <a href = \"tg://openmessage?user_id{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName}</a>🤗", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                            return;
+                        }
+
+                    }
+
+                    if (msg.Text.ToUpper() == "УДАРИТЬ")
+                    {
+                        if (msg.Chat.Id == msg.From.Id)
+                        {
+                            return;
+                        }
+                        else if (msg.ReplyToMessage == null)
+                        {
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName}</a> ударил со всей силой в пустоту😶", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                            return;
+                        }
+                        else
+                        {
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName}</a> ударил со всей силой в <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName}</a>🤕", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                            return;
+                        }
+                    }
+
+                    if (msg.Text.ToUpper() == "УБИТЬ")
+                    {
+                        if (msg.Chat.Id == msg.From.Id)
+                        {
+                            return;
+                        }
+                        else if (msg.ReplyToMessage == null)
+                        {
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName}</a> покончил свою жизнь самоубийством🤡🔪", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                            return;
+                        }
+                        else
+                        {
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName}</a> убивает <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName}</a>🔪😢", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                            return;
+                        }
+
+                    }
+
+                    if (msg.Text.ToUpper() == "УКУСИТЬ")
+                    {
+                        if (msg.Chat.Id == msg.From.Id)
+                        {
+                            return;
+                        }
+                        else if (msg.ReplyToMessage == null)
+                        {
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName}</a> укусил себя🤡", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                            return;
+                        }
+                        else
+                        {
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName}</a> делает укус <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName}</a>🐺", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                            return;
+                        }
+
+                    }
+
+                    if (msg.Text.ToUpper() == "ПОКАЗАТЬ ЯЗЫК")
+                    {
+                        if (msg.Chat.Id == msg.From.Id)
+                        {
+                            return;
+                        }
+                        else if (msg.ReplyToMessage == null)
+                        {
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName}</a> просто показал язык👅", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                            return;
+                        }
+                        else
+                        {
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName}</a> показал язык <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName}</a>😜", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                            return;
+                        }
+
+                    }
+
+                    if (msg.Text.ToUpper() == "НАКОРМИТЬ")
+                    {
+                        if (msg.Chat.Id == msg.From.Id)
+                        {
+                            return;
+                        }
+                        else if (msg.ReplyToMessage == null)
+                        {
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName}</a> вкусно покормил себя😋", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                            return;
+                        }
+                        else
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName}</a> вкусно покормил участника <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName}</a>🍔🍟🌭", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                        return;
+                    }
+
+
+                    //Easter RP command
+
+                    if (msg.Text.Contains("Обосрался") | msg.Text.Contains("обосрался"))
+                    {
+                        await client.SendVideoNoteAsync(chatId: msg.Chat.Id, videoNote: "https://telesco.pe/ScladOfRes/63");
+                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, "Так вот кто дверь испачкал😏", replyToMessageId: msg.MessageId);
+                        return;
+                    }
+
+                    //Buttons/easters
                     switch (msg.Text)
                     {
-                        case "+":
-                            {
-                                if (msg.Chat.Id == msg.From.Id)
-                                {
-                                    break;
-                                }
-                                else if (msg.ReplyToMessage == null)
-                                {
-                                    break;
-                                }
-                                else if (msg.ReplyToMessage != null)
-                                {
-                                    if (msg.ReplyToMessage.From.Id == msg.From.Id)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, а у вас, как я вижу, высокая самооценка😏", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a> соглашается с участником <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a>✅", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                        break;
-                                    }
-                                }
-                                break;
-                            }
-
-                        case "-":
-                            {
-                                if (msg.Chat.Id == msg.From.Id)
-                                {
-                                    break;
-                                }
-                                else if (msg.ReplyToMessage == null)
-                                {
-                                    break;
-                                }
-                                else if (msg.ReplyToMessage != null)
-                                {
-                                    if (msg.ReplyToMessage.From.Id == msg.From.Id)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, зачем себя так унижать😕", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a> не соглашается с участником <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a>💢", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                        break;
-                                    }
-                                }
-                                break;
-                            }
-
+                        
+                        //Just button
                         case "Назад🔃":
                             {
                                 if (msg.Chat.Id != msg.From.Id)
@@ -195,832 +640,6 @@ namespace Laura_Bot_Chat_Manager
                                     break;
                                 }
 
-                            }
-
-                        //Admin's commands
-                        case "Бан":
-                            {
-                                if (msg.Chat.Id == msg.From.Id)
-                                {
-                                    break;
-                                }
-                                else if (msg.ReplyToMessage == null)
-                                {
-                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, "⛔Вы не указали пользователя!");
-                                    break;
-                                }
-                                else if (msg.ReplyToMessage.From.IsBot)
-                                {
-                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"@{msg.ReplyToMessage.From.Username} является ботом🤖!");
-                                    break;
-                                }
-                                else if (msg.ReplyToMessage != null)
-                                {
-
-
-                                    Telegram.Bot.Types.ChatMember[] admins = await client.GetChatAdministratorsAsync(chatId: msg.Chat.Id);
-                                    bool IsAdmin = admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) != null;
-                                    var MemberOutput = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.From.Id);
-                                    var MemberTarget = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.ReplyToMessage.From.Id);
-                                    if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.ReplyToMessage.From.Id; }) != null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> является администратором чата «{msg.Chat.Title}»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-
-                                    }
-                                    else
-                                    {
-                                        await client.KickChatMemberAsync(userId: msg.ReplyToMessage.From.Id, chatId: msg.Chat.Id, cancellationToken: default);
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❌Участник <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> был забанен модератором:<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                break;
-                            }
-
-                        case "бан":
-                            {
-                                if (msg.Chat.Id == msg.From.Id)
-                                {
-                                    break;
-                                }
-                                else if (msg.ReplyToMessage == null)
-                                {
-                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, "⛔Вы не указали пользователя!");
-                                    break;
-                                }
-                                else if (msg.ReplyToMessage.From.IsBot)
-                                {
-                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"@{msg.ReplyToMessage.From.Username} является ботом🤖!");
-                                    break;
-                                }
-                                else if (msg.ReplyToMessage != null)
-                                {
-
-
-                                    Telegram.Bot.Types.ChatMember[] admins = await client.GetChatAdministratorsAsync(chatId: msg.Chat.Id);
-                                    bool IsAdmin = admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) != null;
-                                    var MemberOutput = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.From.Id);
-                                    var MemberTarget = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.ReplyToMessage.From.Id);
-                                    if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.ReplyToMessage.From.Id; }) != null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> является администратором чата «{msg.Chat.Title}»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-
-                                    }
-                                    else
-                                    {
-                                        await client.KickChatMemberAsync(userId: msg.ReplyToMessage.From.Id, chatId: msg.Chat.Id, cancellationToken: default);
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❌Участник <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> был забанен модератором:<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                break;
-                            }
-
-
-                        case "Разбан":
-                            {
-                                if (msg.Chat.Id == msg.From.Id)
-                                {
-                                    break;
-                                }
-
-                                else if (msg.ReplyToMessage.From.IsBot)
-                                {
-                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"@{msg.ReplyToMessage.From.Username} является ботом🤖!");
-                                    break;
-                                }
-
-                                else if (msg.ReplyToMessage == null)
-                                {
-                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, "⛔Вы не указали пользователя!");
-                                    break;
-                                }
-                                else if (msg.ReplyToMessage != null)
-                                {
-                                    Telegram.Bot.Types.ChatMember[] admins = await client.GetChatAdministratorsAsync(chatId: msg.Chat.Id);
-                                    bool IsAdmin = admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) != null;
-                                    var MemberOutput = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.From.Id);
-                                    var MemberTarget = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.ReplyToMessage.From.Id);
-                                    if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.ReplyToMessage.From.Id; }) != null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> является администратором чата «{msg.Chat.Title}»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else if (MemberTarget.Status != Banned)
-                                    {
-                                        if (msg.ReplyToMessage.From.Username == null)
-                                        {
-                                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> не находиться в чёрном списке😕!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                            break;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        await client.UnbanChatMemberAsync(userId: msg.ReplyToMessage.From.Id, chatId: msg.Chat.Id, cancellationToken: default);
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"✅Участник <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> был разбанен модератором <a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>»!\nТеперь его можно вернуть в чат🤗.", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                break;
-                            }
-
-
-                        case "разбан":
-                            {
-                                if (msg.Chat.Id == msg.From.Id)
-                                {
-                                    break;
-                                }
-
-                                else if (msg.ReplyToMessage.From.IsBot)
-                                {
-                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"@{msg.ReplyToMessage.From.Username} является ботом🤖!");
-                                    break;
-                                }
-
-                                else if (msg.ReplyToMessage == null)
-                                {
-                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, "⛔Вы не указали пользователя!");
-                                    break;
-                                }
-                                else if (msg.ReplyToMessage != null)
-                                {
-                                    Telegram.Bot.Types.ChatMember[] admins = await client.GetChatAdministratorsAsync(chatId: msg.Chat.Id);
-                                    bool IsAdmin = admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) != null;
-                                    var MemberOutput = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.From.Id);
-                                    var MemberTarget = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.ReplyToMessage.From.Id);
-                                    if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.ReplyToMessage.From.Id; }) != null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> является администратором чата «{msg.Chat.Title}»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else if (MemberTarget.Status != Banned)
-                                    {
-                                        if (msg.ReplyToMessage.From.Username == null)
-                                        {
-                                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> не находиться в чёрном списке😕!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                            break;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        await client.UnbanChatMemberAsync(userId: msg.ReplyToMessage.From.Id, chatId: msg.Chat.Id, cancellationToken: default);
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"✅Участник <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> был разбанен модератором <a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>»!\nТеперь его можно вернуть в чат🤗.", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                break;
-                            }
-
-                        case "Размут":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-
-                            else if (msg.ReplyToMessage.From.IsBot)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"@{msg.ReplyToMessage.From.Username} является ботом🤖!");
-                                break;
-                            }
-
-                            else if (msg.ReplyToMessage == null)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, "⛔Вы не указали пользователя!");
-                                break;
-                            }
-                            else if (msg.ReplyToMessage != null)
-                            {
-                                Telegram.Bot.Types.ChatMember[] admins = await client.GetChatAdministratorsAsync(chatId: msg.Chat.Id);
-                                bool IsAdmin = admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) != null;
-                                var MemberOutput = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.From.Id);
-                                var MemberTarget = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.ReplyToMessage.From.Id);
-                                if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) == null)
-                                {
-                                    if (msg.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                else if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.ReplyToMessage.From.Id; }) != null)
-                                {
-                                    if (msg.ReplyToMessage.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> является администратором чата «{msg.Chat.Title}»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> является администратором чата «{msg.Chat.Title}»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                else if (MemberTarget.Status != ChatMemberStatus.Restricted)
-                                {
-                                    if (msg.ReplyToMessage.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> не был заглушен😐!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> не был заглушен😐!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                else
-                                {
-                                    await client.PromoteChatMemberAsync(userId: msg.ReplyToMessage.From.Id, chatId: msg.Chat.Id, cancellationToken: default);
-                                    if (msg.ReplyToMessage.From.Username == null)
-                                    {
-
-                                        if (msg.From.Username == null)
-                                        {
-                                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"✅Участник <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> теперь может общаться!\n\nТолько лучше следить за своим языком и не разжигать ссоры😊.\nМодератор: <a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                            break;
-                                        }
-
-                                        else
-                                        {
-                                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"✅Участник <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> теперь может общаться!\n\nТолько лучше следить за своим языком и не разжигать ссоры😊.\nМодератор: <a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a>»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                            break;
-                                        }
-
-                                    }
-                                    else
-                                    {
-                                        if (msg.From.Username == null)
-                                        {
-                                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"✅Участник <a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> теперь может общаться!\n\nТолько лучше следить за своим языком и не разжигать ссоры😊.\nМодератор: <a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                            break;
-                                        }
-
-                                        else
-                                        {
-                                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"✅Участник <a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> теперь может общаться!\n\nТолько лучше следить за своим языком и не разжигать ссоры😊.\nМодератор: <a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a>»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                            break;
-
-                        case "размут":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-
-                            else if (msg.ReplyToMessage.From.IsBot)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"@{msg.ReplyToMessage.From.Username} является ботом🤖!");
-                                break;
-                            }
-
-                            else if (msg.ReplyToMessage == null)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, "⛔Вы не указали пользователя!");
-                                break;
-                            }
-                            else if (msg.ReplyToMessage != null)
-                            {
-                                Telegram.Bot.Types.ChatMember[] admins = await client.GetChatAdministratorsAsync(chatId: msg.Chat.Id);
-                                bool IsAdmin = admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) != null;
-                                var MemberOutput = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.From.Id);
-                                var MemberTarget = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.ReplyToMessage.From.Id);
-                                if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) == null)
-                                {
-                                    if (msg.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                else if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.ReplyToMessage.From.Id; }) != null)
-                                {
-                                    if (msg.ReplyToMessage.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> является администратором чата «{msg.Chat.Title}»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> является администратором чата «{msg.Chat.Title}»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                else if (MemberTarget.Status != ChatMemberStatus.Restricted)
-                                {
-                                    if (msg.ReplyToMessage.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> не был заглушен😐!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> не был заглушен😐!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                else
-                                {
-                                    await client.PromoteChatMemberAsync(userId: msg.ReplyToMessage.From.Id, chatId: msg.Chat.Id, cancellationToken: default);
-                                    if (msg.ReplyToMessage.From.Username == null)
-                                    {
-
-                                        if (msg.From.Username == null)
-                                        {
-                                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"✅Участник <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> теперь может общаться!\n\nТолько лучше следить за своим языком и не разжигать ссоры😊.\nМодератор: <a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                            break;
-                                        }
-
-                                        else
-                                        {
-                                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"✅Участник <a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> теперь может общаться!\n\nТолько лучше следить за своим языком и не разжигать ссоры😊.\nМодератор: <a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a>»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                            break;
-                                        }
-
-                                    }
-                                    else
-                                    {
-                                        if (msg.From.Username == null)
-                                        {
-                                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"✅Участник <a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> теперь может общаться!\n\nТолько лучше следить за своим языком и не разжигать ссоры😊.\nМодератор: <a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                            break;
-                                        }
-
-                                        else
-                                        {
-                                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"✅Участник <a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> теперь может общаться!\n\nТолько лучше следить за своим языком и не разжигать ссоры😊.\nМодератор: <a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a>»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                            break;
-
-                        case "Мут":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-                            else if (msg.ReplyToMessage == null)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, "⛔Вы не указали пользователя!");
-                                break;
-                            }
-                            else if (msg.ReplyToMessage.From.IsBot)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"@{msg.ReplyToMessage.From.Username} является ботом🤖!");
-                                break;
-                            }
-
-                            else if (msg.ReplyToMessage != null)
-                            {
-                                Telegram.Bot.Types.ChatMember[] admins = await client.GetChatAdministratorsAsync(chatId: msg.Chat.Id);
-                                bool isAdmin = admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) != null;
-                                var MemberOutput = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.From.Id);
-                                var MemberTarget = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.ReplyToMessage.From.Id);
-                                if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) == null)
-                                {
-                                    if (msg.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                else if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.ReplyToMessage.From.Id; }) != null)
-                                {
-                                    if (msg.ReplyToMessage.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> является администратором чата «{msg.Chat.Title}»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> является администратором чата «{msg.Chat.Title}»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                else if (MemberTarget.Status == ChatMemberStatus.Restricted)
-                                {
-                                    if (msg.ReplyToMessage.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> уже был заглушен📛!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> уже был заглушен📛!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                else
-                                {
-                                    await client.RestrictChatMemberAsync(chatId: msg.Chat.Id, userId: msg.ReplyToMessage.From.Id, untilDate: DateTime.Now.AddMinutes(15), permissions: new ChatPermissions { CanSendMessages = false, CanSendMediaMessages = false, CanSendOtherMessages = false });
-                                    if (msg.ReplyToMessage.From.Username == null)
-                                    {
-
-                                        if (msg.From.Username == null)
-                                        {
-                                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> был заглушен на 15 минут!\nМодератор: <a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                            break;
-                                        }
-
-                                        else
-                                        {
-                                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> был заглушен на 15 минут!\nМодератор: <a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a>»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                            break;
-                                        }
-
-                                    }
-                                    else
-                                    {
-                                        if (msg.From.Username == null)
-                                        {
-                                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> был заглушен на 15 минут!\nМодератор: <a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                            break;
-                                        }
-
-                                        else
-                                        {
-                                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> был заглушен на 15 минут!\nМодератор: <a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a>»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                            break;
-
-                        case "мут":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-                            else if (msg.ReplyToMessage == null)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, "⛔Вы не указали пользователя!");
-                                break;
-                            }
-                            else if (msg.ReplyToMessage.From.IsBot)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"@{msg.ReplyToMessage.From.Username} является ботом🤖!");
-                                break;
-                            }
-
-                            else if (msg.ReplyToMessage != null)
-                            {
-                                Telegram.Bot.Types.ChatMember[] admins = await client.GetChatAdministratorsAsync(chatId: msg.Chat.Id);
-                                bool isAdmin = admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) != null;
-                                var MemberOutput = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.From.Id);
-                                var MemberTarget = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.ReplyToMessage.From.Id);
-                                if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) == null)
-                                {
-                                    if (msg.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                else if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.ReplyToMessage.From.Id; }) != null)
-                                {
-                                    if (msg.ReplyToMessage.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> является администратором чата «{msg.Chat.Title}»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"❗<a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> является администратором чата «{msg.Chat.Title}»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                else if (MemberTarget.Status == ChatMemberStatus.Restricted)
-                                {
-                                    if (msg.ReplyToMessage.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> уже был заглушен📛!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> уже был заглушен📛!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                else
-                                {
-                                    await client.RestrictChatMemberAsync(chatId: msg.Chat.Id, userId: msg.ReplyToMessage.From.Id, untilDate: DateTime.Now.AddMinutes(15), permissions: new ChatPermissions { CanSendMessages = false, CanSendMediaMessages = false, CanSendOtherMessages = false });
-                                    if (msg.ReplyToMessage.From.Username == null)
-                                    {
-
-                                        if (msg.From.Username == null)
-                                        {
-                                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> был заглушен на 15 минут!\nМодератор: <a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                            break;
-                                        }
-
-                                        else
-                                        {
-                                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> был заглушен на 15 минут!\nМодератор: <a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a>»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                            break;
-                                        }
-
-                                    }
-                                    else
-                                    {
-                                        if (msg.From.Username == null)
-                                        {
-                                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> был заглушен на 15 минут!\nМодератор: <a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                            break;
-                                        }
-
-                                        else
-                                        {
-                                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a> был заглушен на 15 минут!\nМодератор: <a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a>»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                            break;
-                        //Set chat permissions commands
-                        case "/nightmode":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-
-                            else if (msg.Chat.Id != msg.From.Id)
-                            {
-                                Telegram.Bot.Types.ChatMember[] admins = await client.GetChatAdministratorsAsync(chatId: msg.Chat.Id);
-                                bool IsAdmin = admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) != null;
-                                var MemberOutput = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.From.Id);
-                                if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) == null)
-                                {
-                                    if (msg.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                //else if (ChatPermissions == new ChatPermissions{ CanSendMessages = false, CanSendMediaMessages = false, CanSendOtherMessages = false })
-                                //{
-                                //    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"@{msg.From.Username}, уже другой модератор объявил ночной режим🔇!");
-                                //    break;
-                                //}
-                                else
-                                {
-                                    await client.SetChatPermissionsAsync(chatId: msg.Chat.Id, permissions: new ChatPermissions { CanSendMessages = false, CanSendMediaMessages = false, CanSendOtherMessages = false });
-                                    if (msg.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a> объявляет ночной режим🤫!", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a> объявляет ночной режим🤫!", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                    }
-                                    break;
-                                }
-                            }
-                            break;
-
-                        case "/nightmode@Laura_cm_bot":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-
-                            else if (msg.Chat.Id != msg.From.Id)
-                            {
-                                Telegram.Bot.Types.ChatMember[] admins = await client.GetChatAdministratorsAsync(chatId: msg.Chat.Id);
-                                bool IsAdmin = admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) != null;
-                                var MemberOutput = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.From.Id);
-                                if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) == null)
-                                {
-                                    if (msg.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                //else if (ChatPermissions == new ChatPermissions{ CanSendMessages = false, CanSendMediaMessages = false, CanSendOtherMessages = false })
-                                //{
-                                //    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"@{msg.From.Username}, уже другой модератор объявил ночной режим🔇!");
-                                //    break;
-                                //}
-                                else
-                                {
-                                    await client.SetChatPermissionsAsync(chatId: msg.Chat.Id, permissions: new ChatPermissions { CanSendMessages = false, CanSendMediaMessages = false, CanSendOtherMessages = false });
-                                    if (msg.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a> объявляет ночной режим🤫!", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a> объявляет ночной режим🤫!", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                    }
-                                    break;
-                                }
-                            }
-                            break;
-
-                        case "/statemode":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-
-                            else if (msg.Chat.Id != msg.From.Id)
-                            {
-                                Telegram.Bot.Types.ChatMember[] admins = await client.GetChatAdministratorsAsync(chatId: msg.Chat.Id);
-                                bool IsAdmin = admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) != null;
-                                var MemberOutput = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.From.Id);
-                                if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) == null)
-                                {
-                                    if (msg.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                //else if (ChatPermissions == new ChatPermissions{ CanSendMessages = false, CanSendMediaMessages = false, CanSendOtherMessages = false })
-                                //{
-                                //    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"@{msg.From.Username}, уже другой модератор объявил ночной режим🔇!");
-                                //    break;
-                                //}
-                                else
-                                {
-                                    await client.SetChatPermissionsAsync(chatId: msg.Chat.Id, permissions: new ChatPermissions { CanSendMessages = true, CanSendMediaMessages = true, CanSendOtherMessages = true, CanAddWebPagePreviews = true });
-                                    if (msg.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a> возвращает чат в штатный режим✅", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a> возвращает чат в штатный режим✅", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                    }
-                                }
-                            }
-                            break;
-
-                        case "/statemode@Laura_cm_bot":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-
-                            else if (msg.Chat.Id != msg.From.Id)
-                            {
-                                Telegram.Bot.Types.ChatMember[] admins = await client.GetChatAdministratorsAsync(chatId: msg.Chat.Id);
-                                bool IsAdmin = admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) != null;
-                                var MemberOutput = await client.GetChatMemberAsync(chatId: msg.Chat.Id, userId: msg.From.Id);
-                                if (admins.FirstOrDefault(a => { return a.User != null && a.User.Id == msg.From.Id; }) == null)
-                                {
-                                    if (msg.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!»", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"⛔<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a>, вы не являетесь администратором/создателем чата!", disableWebPagePreview: true, parseMode: ParseMode.Html);
-                                        break;
-                                    }
-                                }
-                                //else if (ChatPermissions == new ChatPermissions{ CanSendMessages = false, CanSendMediaMessages = false, CanSendOtherMessages = false })
-                                //{
-                                //    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"@{msg.From.Username}, уже другой модератор объявил ночной режим🔇!");
-                                //    break;
-                                //}
-                                else
-                                {
-                                    await client.SetChatPermissionsAsync(chatId: msg.Chat.Id, permissions: new ChatPermissions { CanSendMessages = true, CanSendMediaMessages = true, CanSendOtherMessages = true, CanAddWebPagePreviews = true });
-                                    if (msg.From.Username == null)
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a> возвращает чат в штатный режим✅", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName} {msg.From.LastName}</a> возвращает чат в штатный режим✅", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                    }
-                                }
-                            }
-                            break;
-
-                        case "/help@Laura_cm_bot":
-                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, "<b>Внимание!\nВ инструкции пока что лежат не все команды, так как бот ещё в разработке!\n</b><a href = \"https://telegra.ph/Polnyj-spisok-komand-bota-Laura-06-21\">Инструкция</a>", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                            break;
-
-                        case "/help":
-                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, "<b>Внимание!\nВ инструкции пока что лежат не все команды, так как бот ещё в разработке!\n</b><a href = \"https://telegra.ph/Polnyj-spisok-komand-bota-Laura-06-21\">Инструкция</a>", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                            break;
-
-                        case "/start@Laura_cm_bot":
-                            if (msg.Chat.Id != msg.From.Id)
-                            {
-                                
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"Здравствуйте, я чат-менеджер бот Лаура!\nНапишите 👉/help, чтобы получить список команд.");
-                                BotCommand[] botCommands = { new() { Command = "start", Description = "Обновить список команд" }, new() { Command = "help", Description = "Получить справочник по использованию бота" }, new() { Command = "getchatid", Description = "Получить ID данного чата" }, new() { Command = "nightmode", Description = "Включить ночной режим в чате" }, new() { Command = "statemode", Description = "Вернуть чат в штатный режим" } };
-                                await client.SetMyCommandsAsync(botCommands);
-                                await client.GetMyCommandsAsync();
-                                await client.SetMyCommandsAsync(botCommands);
-                                Console.WriteLine($"Bot was started in chat: ID{msg.Chat.Id}");
-                                break;
-                            }
-                            else
-                            {
-                                BotCommand[] botCommands = { new() { Command = "start", Description = "Обновить список команд" }, new() { Command = "getmyid", Description = "Получить свой личный ID" } };
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"Здравствуйте, я чат-менеджер бот Лаура!\nНажмите на кнопку👉«Инструкция📚», чтобы получить список команд.");
-                                await client.SetMyCommandsAsync(botCommands);
-                                await client.GetMyCommandsAsync();
-                                await client.SetMyCommandsAsync(botCommands);
-                                Console.WriteLine($"Bot was started in chat: ID{msg.Chat.Id}");
-                                break;
-                            }
-
-                        case "/start":
-                            if (msg.Chat.Id != msg.From.Id)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"Здравствуйте, я чат-менеджер бот Лаура!\nНапишите 👉/help, чтобы получить список команд.");
-                                BotCommand[] botCommands = { new() { Command = "start", Description = "Обновить список команд" }, new() { Command = "help", Description = "Получить справочник по использованию бота" }, new() { Command = "getchatid", Description = "Получить ID данного чата" }, new() { Command = "nightmode", Description = "Включить ночной режим в чате" }, new() { Command = "statemode", Description = "Вернуть чат в штатный режим" } };
-                                await client.SetMyCommandsAsync(botCommands);
-                                await client.GetMyCommandsAsync();
-                                await client.SetMyCommandsAsync(botCommands);
-                                Console.WriteLine($"Bot was started in chat: ID{msg.Chat.Id}");
-                                break;
-                            }
-                            else
-                            {
-                                BotCommand[] botCommands = { new() { Command = "start", Description = "Обновить список команд" }, new() { Command = "getmyid", Description = "Получить свой личный ID" } };
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"Здравствуйте, я чат-менеджер бот Лаура!\nНажмите на кнопку👉«Инструкция📚», чтобы получить список команд.");
-                                await client.SetMyCommandsAsync(botCommands);
-                                await client.GetMyCommandsAsync();
-                                await client.SetMyCommandsAsync(botCommands);
-                                Console.WriteLine($"Bot was started in chat: ID{msg.Chat.Id}");
-                                break;
                             }
 
                         //Buttons from "GetButtons"
@@ -1093,217 +712,11 @@ namespace Laura_Bot_Chat_Manager
                                 break;
                             }
                             else
-                                break;
-
-                        //RP Commands
-                        case "Обнять":
-                            if (msg.Chat.Id == msg.From.Id)
                             {
                                 break;
                             }
-                            else if (msg.ReplyToMessage == null)
-                            {
-                                if (msg.From.Username != null)
-                                {
-                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> обнял себя🤗", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                    break;
-                                }
 
-                                else
-                                {
-                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://openmessage?user_id={msg.From.Id}\">{msg.From.FirstName}</a> обнял себя🤗", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                    break;
-                                }
-                            }
-                            else
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> обнял <a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName}</a>🤗", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                            break;
-
-                        case "обнять":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-                            else if (msg.ReplyToMessage == null)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> обнял себя🤗", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                break;
-                            }
-                            else
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> обнял <a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName}</a>🤗", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                            break;
-
-
-
-                        case "Ударить":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-                            else if (msg.ReplyToMessage == null)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> ударил со всей силой в пустоту😶", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                break;
-                            }
-                            else
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> ударил со всей силой в <a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName}</a>🤕", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                            break;
-
-                        case "ударить":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-                            else if (msg.ReplyToMessage == null)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> ударил со всей силой в пустоту😶", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                break;
-                            }
-                            else
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> ударил со всей силой в <a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName}</a>🤕", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                            break;
-
-
-
-                        case "Убить":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-                            else if (msg.ReplyToMessage == null)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> покончил свою жизнь самоубийством🤡🔪", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                break;
-                            }
-                            else
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> убивает <a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName}</a>🔪😢", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                            break;
-
-                        case "убить":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-                            else if (msg.ReplyToMessage == null)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> покончил свою жизнь самоубийством🤡🔪", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                break;
-                            }
-                            else
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> убивает <a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName}</a>🔪😢", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                            break;
-
-
-
-                        case "Укусить":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-                            else if (msg.ReplyToMessage == null)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> укусил себя🤡", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                break;
-                            }
-                            else
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> делает укус <a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName}</a>🐺", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                            break;
-
-                        case "укусить":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-                            else if (msg.ReplyToMessage == null)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> укусил себя🤡", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                break;
-                            }
-                            else
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> делает укус <a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName}</a>🐺", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                            break;
-
-
-
-                        case "Показать язык":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-                            else if (msg.ReplyToMessage == null)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> просто показал язык👅", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                break;
-                            }
-                            else
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> показал язык <a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName}</a>😜", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                            break;
-
-                        case "показать язык":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-                            else if (msg.ReplyToMessage == null)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> просто показал язык👅", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                break;
-                            }
-                            else
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> показал язык <a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName}</a>😜", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                            break;
-
-
-
-                        case "Накормить":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-                            else if (msg.ReplyToMessage == null)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> вкусно покормил себя😋", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                break;
-                            }
-                            else
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> вкусно покормил участника <a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName}</a>🍔🍟🌭", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                            break;
-
-                        case "накормить":
-                            if (msg.Chat.Id == msg.From.Id)
-                            {
-                                break;
-                            }
-                            else if (msg.ReplyToMessage == null)
-                            {
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> вкусно покормил себя😋", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                                break;
-                            }
-                            else
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> вкусно покормил участника <a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName}</a>🍔🍟🌭", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                            break;
-                        //Other easter commands
-                        case "Обосрался":
-                            await client.SendVideoNoteAsync(chatId: msg.Chat.Id, videoNote: "https://telesco.pe/ScladOfRes/63");
-                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, "Так вот кто дверь испачкал😏", replyToMessageId: msg.MessageId);
-                            break;
-
-                        case "обосрался":
-                            await client.SendVideoNoteAsync(chatId: msg.Chat.Id, videoNote: "https://telesco.pe/ScladOfRes/63");
-                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, "Так вот кто дверь испачкал😏", replyToMessageId: msg.MessageId);
-                            break;
-
-                        case "Обосралась":
-                            await client.SendVideoNoteAsync(chatId: msg.Chat.Id, videoNote: "https://telesco.pe/ScladOfRes/63");
-                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, "Так вот кто дверь испачкал😏", replyToMessageId: msg.MessageId);
-                            break;
-
-                        case "обосралась":
-                            await client.SendVideoNoteAsync(chatId: msg.Chat.Id, videoNote: "https://telesco.pe/ScladOfRes/63");
-                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, "Так вот кто дверь испачкал😏", replyToMessageId: msg.MessageId);
-                            break;
-
-
+                        //Easter commands
                         case "Иди нахуй шлюха":
                             await client.SendVideoAsync(chatId: msg.Chat.Id, video: "https://t.me/ScladOfRes/61", replyToMessageId: msg.MessageId);
                             break;
@@ -1315,11 +728,11 @@ namespace Laura_Bot_Chat_Manager
                             }
                             else
                                 await client.SendVideoAsync(chatId: msg.Chat.Id, video: "https://t.me/ScladOfRes/2");
-                            Console.WriteLine(" ");
-                            Console.WriteLine($"{msg.From.FirstName} {msg.From.LastName} ask question who this Kinaut!");
-                            Console.WriteLine(" ");
-                            await client.SendTextMessageAsync(chatId: msg.From.Id, "Пояснительная бригада:\n Кинаут - враг создателя бота в том плане, что он шантажом с него вытряхивал деньги. Кинаут также рейдил его тг канал и чат 8-9 раз @RiceTeamStudio, вплоть до тг акка(первый раз удалил тг акк, второй раз - довёл до вечного спам бана).\nТяжёлые у него были времена😕.");
-                            break;
+                                Console.WriteLine(" ");
+                                Console.WriteLine($"{msg.From.FirstName} {msg.From.LastName} ask question who this Kinaut!");
+                                Console.WriteLine(" ");
+                                await client.SendTextMessageAsync(chatId: msg.From.Id, "Пояснительная бригада:\n Кинаут - враг создателя бота в том плане, что он шантажом с него вытряхивал деньги. Кинаут также рейдил его тг канал и чат 8-9 раз @RiceTeamStudio, вплоть до тг акка(первый раз удалил тг акк, второй раз - довёл до вечного спам бана).\nТяжёлые у него были времена😕.");
+                                break;
 
                         case "Кидаем плотную зигу":
                             if (msg.Chat.Id == msg.From.Id)
