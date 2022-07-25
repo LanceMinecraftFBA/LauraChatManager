@@ -6,3 +6,7 @@ NuGet packages/class:
 - Telegram.Bot 16.0.1
 - WeatherApi(class)
 - System.Data.SqlClient
+
+Languages:
+- Russian
+- English(in developing)
