@@ -28,12 +28,12 @@ namespace Laura_Bot_Chat_Manager
 
     class Program
     {
-        private static string token { get; set; } = "5565507778:AAGDcO0ytb3RlnyWLdUKIUZOklyPl-s_Wik";
+        private static string token { get; set; } = "bot_token";
         private static TelegramBotClient client;
         public static string Username { get; set; }
         public long Id { get; set; }
         private static User user;
-        static SqlConnection sql = new SqlConnection(connectionString: "Data Source=(LocalDB)\\MSSQLLocalDB;AttachDbFilename=C:\\Users\\Ivanin Kirill\\Documents\\LauraBotRes\\Laura Bot Chat Manager\\DataBase_moder.mdf;Integrated Security=True");
+        static SqlConnection sql = new SqlConnection(connectionString: "DataBase not created");
         static BotCommand command;
         private static ChatPermissions ChatPermissions;
 
