@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using Telegram.Bot;
@@ -28,7 +28,7 @@ namespace Laura_Bot_Chat_Manager
 
     class Program
     {
-        private static string token { get; set; } = "bot_token";
+        private static string token { get; set; } = "token_bot";
         private static TelegramBotClient client;
         public static string Username { get; set; }
         public long Id { get; set; }
@@ -39,11 +39,6 @@ namespace Laura_Bot_Chat_Manager
 
         static void Main(string[] args)
         {
-            var proxy = new WebProxy("socks5://127.0.0.1:9050");
-
-            var httpClient = new HttpClient(
-                new SocketsHttpHandler { Proxy = proxy, UseProxy = true }
-            );
 
             client = new TelegramBotClient(token);
             client.StartReceiving(new UpdateType[] { UpdateType.Message });
@@ -108,7 +103,8 @@ namespace Laura_Bot_Chat_Manager
                 {
                     Console.WriteLine($"{DateTime.Now} New Message from ID{msg.Chat.Id}, it's message: {msg.Text}");
 
-                    var LogChat = -763013536;
+                    //Logchat (FOR DEVELOPERS!!!!)
+                    var LogChat = -763013536; //set chat id for log if you developer or delete lines 106-129 if you don't want using log chat
                     if (msg.From.Username == null)
                     {
                         if (msg.Chat.Id == msg.From.Id)
@@ -132,6 +128,7 @@ namespace Laura_Bot_Chat_Manager
                         }
                     }
 
+                    //RP commands/admin's commands(Code optimization soon)
                     switch (msg.Text)
                     {
                         case "+":
@@ -199,6 +196,8 @@ namespace Laura_Bot_Chat_Manager
                                 }
 
                             }
+
+                        //Admin's commands
                         case "Бан":
                             {
                                 if (msg.Chat.Id == msg.From.Id)
@@ -788,7 +787,7 @@ namespace Laura_Bot_Chat_Manager
                                 }
                             }
                             break;
-
+                        //Set chat permissions commands
                         case "/nightmode":
                             if (msg.Chat.Id == msg.From.Id)
                             {
@@ -1024,7 +1023,7 @@ namespace Laura_Bot_Chat_Manager
                                 break;
                             }
 
-                        //Кнопки класса "GetButtons"
+                        //Buttons from "GetButtons"
                         case "Инструкция📚":
                             if (msg.Chat.Id != msg.From.Id)
                             {
@@ -1096,7 +1095,7 @@ namespace Laura_Bot_Chat_Manager
                             else
                                 break;
 
-                        //Развлекательные рп команды
+                        //RP Commands
                         case "Обнять":
                             if (msg.Chat.Id == msg.From.Id)
                             {
@@ -1283,7 +1282,7 @@ namespace Laura_Bot_Chat_Manager
                             else
                                 await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"https://t.me/{msg.From.Username}\">{msg.From.FirstName}</a> вкусно покормил участника <a href = \"https://t.me/{msg.ReplyToMessage.From.Username}\">{msg.ReplyToMessage.From.FirstName}</a>🍔🍟🌭", parseMode: ParseMode.Html, disableWebPagePreview: true);
                             break;
-                        //Другие развлекательные команды
+                        //Other easter commands
                         case "Обосрался":
                             await client.SendVideoNoteAsync(chatId: msg.Chat.Id, videoNote: "https://telesco.pe/ScladOfRes/63");
                             await client.SendTextMessageAsync(chatId: msg.Chat.Id, "Так вот кто дверь испачкал😏", replyToMessageId: msg.MessageId);
@@ -1354,28 +1353,13 @@ namespace Laura_Bot_Chat_Manager
                             await client.SendAudioAsync(chatId: msg.Chat.Id, audio: "https://t.me/DichBlogOfLance/731");
                             break;
 
-                        //Другое
+                        //Sponsors of the bot
                         case "Партнёры бота":
-                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, text: "<b>Наши партнёры бота🤝:</b>\n<i>-@FlushaStudio</i>\n<i>-@RiceTeamStudio</i>\n<i>-@banan4ikmoder</i>\n<i>@TheShadow_hk(Dev)</i>\n<i>Список обновляется</i>", parseMode: ParseMode.Html);
+                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, text: "<b>Наши партнёры бота🤝:</b>\n<i>-@FlushaStudio(Использование бота)</i>\n<i>-@RiceTeamStudio(Пиар проекта)</i>\n<i>-@banan4ikmoder(Пиар)</i>\n<i>@TheShadow_hk(Dev, разработал проверку статуса участника для корректного бана в чате)</i>\n<i>Maxim Bysh(Помог с разработкой мута по заданному времени)</i>\n<i>Список обновляется</i>", parseMode: ParseMode.Html);
                             break;
                     }
 
-                    if (msg.Text == "Логин" | msg.Text == "логин")
-                    {
-                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, "Введите пароль:", replyMarkup: new ForceReplyMarkup { Selective = true });
-                        if (msg.Text == "123")
-                        {
-                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, "Пароль верен!");
-                        }
-                        else if (msg.ReplyToMessage != null & msg.Text != "123")
-                        {
-                            await client.SendTextMessageAsync(chatId: msg.Chat.Id, "Пароль неверен!");
-                        }
-                        else
-                        {
-                            return;
-                        }
-                    }
+                    //Mute target user
                     if (msg.Text.StartsWith("Мут ") | msg.Text.StartsWith("мут "))
                     {
                         if (msg.Chat.Id == msg.From.Id)
@@ -1564,6 +1548,7 @@ namespace Laura_Bot_Chat_Manager
                         return;
                     }
 
+                    //Ban target user with comment
                     if (msg.Text.StartsWith("Бан\n") | msg.Text.StartsWith("бан\n"))
                     {
                         if (msg.Chat.Id == msg.From.Id)
@@ -1608,6 +1593,7 @@ namespace Laura_Bot_Chat_Manager
                         }
                     }
 
+                    //Add input Chat Rules(In Developing)
                     if (msg.Text.StartsWith("/NewRules("))
                     {
                         if (msg.Chat.Id == msg.From.Id)
@@ -1645,6 +1631,7 @@ namespace Laura_Bot_Chat_Manager
 
                     }
 
+                    //Output chat rules(In Developing)
                     if (msg.Text.ToUpper() == "ПРАВИЛА")
                     {
                         if (sql.State == ConnectionState.Closed)
@@ -1656,6 +1643,7 @@ namespace Laura_Bot_Chat_Manager
                         }
                     }
 
+                    //Get Chat Id (For admins)
                     if (msg.Text.StartsWith("/getchatid"))
                     {
                         if (msg.Chat.Id == msg.From.Id)
@@ -1680,6 +1668,7 @@ namespace Laura_Bot_Chat_Manager
                         }
                     }
 
+                    //Get your id 
                     if (msg.Text == "/getmyid")
                     {
                         if (msg.Chat.Id == msg.From.Id)
@@ -1693,6 +1682,7 @@ namespace Laura_Bot_Chat_Manager
                         }
                     }
 
+                    //Random rating
                     if (msg.Text.StartsWith("оценку") | msg.Text.StartsWith("Оценку"))
                     {
                         string[] rateAnswer = { "-10/10, что за кринж ты кинул🤢", "4/10, так себе сделано🙄", "0/10, фигня, переделывай", "100/10, просто круче некуда🤩", "7/10, неплохо, вполне достойно🙂", "10/10, супер✨" };
@@ -1723,6 +1713,7 @@ namespace Laura_Bot_Chat_Manager
                         }
                     }    
 
+                    //Delete Target Message
                     if (msg.Text.ToUpper() == "DELMSG")
                     {
                         if (msg.Chat.Id == msg.From.Id)
@@ -1753,6 +1744,7 @@ namespace Laura_Bot_Chat_Manager
                         }
                     }
 
+                    //Weather request from WeatherClassApi.cs
                     if (msg.Text.StartsWith("Погода в") | msg.Text.StartsWith("погода в"))
                     {
                         String[] InpResponse = msg.Text.Split(' ');
@@ -1764,6 +1756,7 @@ namespace Laura_Bot_Chat_Manager
                         await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<b>{WeatherApi.answer}</b>\n\n\n<b>Информация города <code>{WeatherApi.nameCity}</code>:</b>\n\nТемпература города🌡: <code>{Math.Round(WeatherApi.temperatureCity)}°C</code>\nОщущается как: <code>{Math.Round(WeatherApi.tempFeelsLikeCity)}°C</code>\nКоординаты города🗺: <code>{WeatherApi.lonCity} {WeatherApi.latCity}</code>\nПогода⛅: <code>{WeatherApi.weatherCity}</code>\nДавление⬇:<code>{WeatherApi.pressureCity} гПа</code>\nСтрана🏳: <code>{WeatherApi.countryCity}</code>\nВидимость👁: <code>{WeatherApi.visibilityCity} км</code>\nВлажность💧: <code>{WeatherApi.humidityCity}%</code>\nСкорость ветра🌫: <code>{WeatherApi.windSpeedCity} км/ч</code>\nНаправление ветра: <code>{WeatherApi.windDegCity}° ({WeatherApi.WindAnswer})</code>", parseMode: ParseMode.Html);
                     }
 
+                    //Random % of question
                     if (msg.Text.StartsWith("Лаура инфа") | msg.Text.StartsWith("лаура инфа"))
                     {
                         Random rndm_count = new Random();
@@ -1794,6 +1787,9 @@ namespace Laura_Bot_Chat_Manager
                     Console.WriteLine(exc2.ToString());
                     return;
                 }
+
+                //Ban with Username(In Developing) 
+
                 //if (msg.Text.StartsWith("Бан @") | msg.Text.StartsWith("бан @"))
                 //{
                 //    if (msg.Chat.Id == msg.From.Id)
