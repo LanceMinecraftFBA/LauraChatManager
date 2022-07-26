@@ -1,5 +1,5 @@
 # LauraChatManager
-A new Telegram chat manager bot from FBA team.
+A new Telegram chat manager bot by FBA team.
 
 NuGet packages/class:
 - Newtonsoft.Json
