@@ -5,7 +5,10 @@ NuGet packages/class:
 - Newtonsoft.Json
 - Telegram.Bot 16.0.1
 - WeatherApi(class)
-- System.Data.SqlClient
+- MySql.Data
+- Connector(class)
+- Functions(class)
+- AIClass(class/in dev)
 
 Languages:
 - Russian
