@@ -9,6 +9,7 @@ NuGet packages/class:
 - Connector(class)
 - Functions(class)
 - AIClass(class/in dev)
+- Connector(class, MySql requests)
 
 Languages:
 - Russian
