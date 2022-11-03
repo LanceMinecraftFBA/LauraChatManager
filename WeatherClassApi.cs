@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Net;
 using Newtonsoft.Json;
@@ -7,7 +7,7 @@ namespace WeatherApiClass
 {
     public class WeatherApi
     {
-        public static string api_token = "token_from_openweather";
+        public static string api_token = "api_token";
         public string inputCityName;
         public static string nameCity;
         internal static float temperatureCity;
@@ -23,6 +23,18 @@ namespace WeatherApiClass
         internal static int windDegCity;
         internal static double lonCity;
         internal static double latCity;
+
+        internal static bool ResponseIsNormal;
+
+        internal static int aqi;
+        internal static double co;
+        internal static double no;
+        internal static double no2;
+        internal static double o3;
+        internal static double so2;
+        internal static double pm2_5;
+        internal static double pm10;
+        internal static double nh3;
 
         public static void Weather(string city_name)
         {
@@ -52,14 +64,54 @@ namespace WeatherApiClass
                 windDegCity = weatherResponse.wind.deg;
                 lonCity = weatherResponse.coord.lon;
                 latCity = weatherResponse.coord.lat;
+                GetAirPollution(lonCity, latCity);
+                ResponseIsNormal = true;
             }
             catch (System.Net.WebException)
             {
                 Console.WriteLine("Error to connect with home.openweathermap.org or request if failed!");
+                ResponseIsNormal = false;
                 return;
             }
         }
 
+        private static void GetAirPollution(double lon, double lat)
+        {
+            try
+            {
+                var Lon = Convert.ToInt32(Math.Round(lon));
+                var Lat = Convert.ToInt32(Math.Round(lat));
+
+                string url = $"http://api.openweathermap.org/data/2.5/air_pollution?lat={Lat}&lon={Lon}&appid={api_token}";
+                HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(url);
+                HttpWebResponse webResponse = (HttpWebResponse)webRequest?.GetResponse();
+
+                string AirPollutionResult;
+
+                using (StreamReader streamReader = new StreamReader(webResponse.GetResponseStream()))
+                {
+                    AirPollutionResult = streamReader.ReadToEnd();
+                }
+
+                AirPollution airPollution = JsonConvert.DeserializeObject<AirPollution>(AirPollutionResult);
+                aqi = airPollution.List[0].Main.aqi;
+                co = airPollution.List[0].Components.co;
+                no = airPollution.List[0].Components.no;
+                no2 = airPollution.List[0].Components.no2;
+                o3 = airPollution.List[0].Components.o3;
+                so2 = airPollution.List[0].Components.so2;
+                pm2_5 = airPollution.List[0].Components.pm2_5;
+                pm10 = airPollution.List[0].Components.pm10;
+                nh3 = airPollution.List[0].Components.nh3;
+                ResponseIsNormal = true;
+            }
+            catch (WebException)
+            {
+                Console.WriteLine("Error to connect with home.openweathermap.org or request is failed!");
+                ResponseIsNormal = false;
+                return;
+            }
+        }
 
         public static void Celsius(float celsius)
         {
@@ -132,11 +184,51 @@ namespace WeatherApiClass
         }
     }
 
+    public class AirPollution
+    {
+        public Coord Coord;
+
+        public List[] List;
+    }
+
+    public class List
+    {
+        public long dt;
+
+        public Main Main;
+
+        public Components Components;
+    }
+
+    public class Main
+    {
+        public int aqi;
+    }
+
+    public class Components
+    {
+        public double co;
+
+        public double no;
+
+        public double no2;
+
+        public double o3;
+
+        public double so2;
+
+        public double pm2_5;
+
+        public double pm10;
+
+        public double nh3;
+    }
 
     public class WeatherResponse
     {
 
         public Coord coord;
+
         public WeatherInfo Main { get; set; }
 
         public string Name { get; set; }
@@ -157,6 +249,7 @@ namespace WeatherApiClass
 
         public string Description { get; set; }
     }
+
     public class WeatherInfo
     {
         public float Temp { get; set; }
@@ -191,3 +284,4 @@ namespace WeatherApiClass
         public double lat { get; set; }
     }
 }
+
