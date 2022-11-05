@@ -163,4 +163,14 @@ namespace Functions
             return keyboard;
         }
     }
+    public class Cleaner
+    {
+        public static void DeleteChatData(long chatId)
+        {
+            Connector.Connector.DeleteUserBot(chatId);
+            Connector.Connector.DeleteChatRules(chatId);
+            Connector.Connector.DeleteCapchaSetting(chatId);
+            Connector.Connector.DeleteNightMode(chatId);
+        }
+    }
 }
