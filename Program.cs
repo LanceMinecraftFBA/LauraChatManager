@@ -22,8 +22,12 @@ namespace Laura_Bot_Chat_Manager
 
     class Program
     {
-        private static string token { get; set; } = "bot_token";
-        private static long myId = 0;
+
+        private static string token { get; set; } = "5565507778:AAEP06oTph93z6Y2BeGxZX0kjXMROxPlQRQ";
+        private static long myId = 5565507778;
+
+        //private static string token { get; set; } = "5562501226:AAHKm5EtifOR_SLYH2Qx160JCOlxj9z8Pjg";
+        //private static long myId = 5562501226;
 
         private static TelegramBotClient client;
         private static long channel = 777000;
@@ -33,10 +37,10 @@ namespace Laura_Bot_Chat_Manager
         private static long fbaNews = -1001562946820;
         private static DateTime timeOfStart = DateTime.Now;
 
-        private static string host { get; set; } = "host";
-        private static string user { get; set; } = "user";
-        private static string passwrd { get; set; } = "password";
-        private static string database { get; set; } = "database";
+        private static string host { get; set; } = "185.252.147.37";
+        private static string user { get; set; } = "lance";
+        private static string passwrd { get; set; } = "V1oletIsTop!";
+        private static string database { get; set; } = "lance_db";
 
         private static string conn { get; set; } = $"server={host};user={user};database={database};password={passwrd}";
 
@@ -135,11 +139,57 @@ namespace Laura_Bot_Chat_Manager
 
         private static async void Checker()
         {
+            long chatId = 0;
+            long userId = 0;
+
             try
             {
                 MySqlConnection mySql = new MySqlConnection(conn);
                 MySqlCommand myCmd;
                 MySqlDataReader myReader;
+
+                #region Антиспам хэндлер
+                var counter = 0;
+                mySql.Open();
+                myCmd = new MySqlCommand("SELECT COUNT(*) FROM antispam", mySql);
+                myReader = myCmd.ExecuteReader();
+                if (myReader.Read() == false)
+                {
+                    Console.WriteLine("no spam");
+                    mySql.Close();
+                }
+                else
+                {
+                    counter = Convert.ToInt32(myReader[0].ToString());
+                    mySql.Close();
+
+                    var i = 0;
+                    while (i < counter)
+                    {
+                        mySql.Open();
+                        var getSpam = "SELECT * FROM antispam";
+
+                        myCmd = new MySqlCommand(getSpam, mySql);
+                        myReader = myCmd.ExecuteReader();
+                        if (myReader.Read() != false)
+                        {
+                            userId = Convert.ToInt64(myReader[2].ToString());
+                            chatId = Convert.ToInt64(myReader[1].ToString());
+
+                            mySql.Close();
+
+                            Connector.Connector.DeleteAntiSpam(chatId, userId);
+                            Console.WriteLine($"Deleting AS for {userId} from {chatId}");
+                        }
+                        else
+                        {
+                            mySql.Close();
+                            return;
+                        }
+                        i++;
+                    }
+                }
+                #endregion
 
                 #region Варны
                 mySql.Open();
@@ -148,8 +198,8 @@ namespace Laura_Bot_Chat_Manager
                 myReader = myCmd.ExecuteReader();
                 while (myReader.Read())
                 {
-                    var userId = Convert.ToInt64(myReader[1].ToString());
-                    var chatId = Convert.ToInt64(myReader[2].ToString());
+                    userId = Convert.ToInt64(myReader[1].ToString());
+                    chatId = Convert.ToInt64(myReader[2].ToString());
                     var warns = myReader[3].ToString();
                     var deadLine = DateTime.Parse(myReader[4].ToString());
                     var dateNow = DateTime.Now;
@@ -187,7 +237,7 @@ namespace Laura_Bot_Chat_Manager
                     myReader = myCmd.ExecuteReader();
                     while (myReader.Read())
                     {
-                        long chatId = Convert.ToInt64(myReader[0].ToString());
+                        chatId = Convert.ToInt64(myReader[0].ToString());
                         var night = myReader[1].ToString().Split(':');
                         var state = myReader[2].ToString().Split(':');
                         var status = myReader[3].ToString();
@@ -228,52 +278,6 @@ namespace Laura_Bot_Chat_Manager
                 }
                 #endregion
 
-                #region Антиспам хэндлер
-                var counter = 0;
-                mySql.Open();
-                myCmd = new MySqlCommand("SELECT COUNT(*) FROM antispam", mySql);
-                myReader = myCmd.ExecuteReader();
-                if (myReader.Read() == false)
-                {
-                    Console.WriteLine("no spam");
-                    mySql.Close();
-                }
-                else
-                {
-                    counter = Convert.ToInt32(myReader[0].ToString());
-                    mySql.Close();
-
-                    var i = 0;
-                    while (i < counter)
-                    {
-                        mySql.Open();
-                        var getSpam = "SELECT * FROM antispam";
-
-                        long user_id = 0;
-                        long chat_id = 0;
-
-                        myCmd = new MySqlCommand(getSpam, mySql);
-                        myReader = myCmd.ExecuteReader();
-                        if (myReader.Read() != false)
-                        {
-                            user_id = Convert.ToInt64(myReader[2].ToString());
-                            chat_id = Convert.ToInt64(myReader[1].ToString());
-
-                            mySql.Close();
-
-                            Connector.Connector.DeleteAntiSpam(chat_id, user_id);
-                            Console.WriteLine($"Deleting AS for {user_id} from {chat_id}");
-                        }
-                        else
-                        {
-                            mySql.Close();
-                            return;
-                        }
-                        i++;
-                    }
-                }
-                #endregion
-
                 #region Рассылка погоды
                 mySql.Open();
                 var query = "SELECT user_id, city, next_response FROM weather_subs";
@@ -293,7 +297,7 @@ namespace Laura_Bot_Chat_Manager
                     while (myReader.Read())
                     {
                         var dl = DateTime.Parse(myReader[2].ToString());
-                        var userId = Convert.ToInt64(myReader[0].ToString());
+                        userId = Convert.ToInt64(myReader[0].ToString());
                         var city = myReader[1].ToString();
 
                         if (dl > DateTime.Now)
@@ -352,8 +356,8 @@ NH3: <i>{WeatherApi.nh3} мкг/м3</i>
                     myReader = myCmd.ExecuteReader();
                     while(myReader.Read())
                     {
-                        var chatId = Convert.ToInt64(myReader[1].ToString());
-                        var userId = Convert.ToInt64(myReader[2].ToString());
+                        chatId = Convert.ToInt64(myReader[1].ToString());
+                        userId = Convert.ToInt64(myReader[2].ToString());
                         var messageId = Convert.ToInt32(myReader[3].ToString());
                         var end_in = DateTime.Parse(myReader[4].ToString());
 
@@ -401,7 +405,7 @@ NH3: <i>{WeatherApi.nh3} мкг/м3</i>
                     {
                         DateTime deadL = DateTime.Parse(myReader[4].ToString());
                         var targId = Convert.ToInt64(myReader[2].ToString());
-                        var userId = Convert.ToInt64(myReader[1].ToString());
+                        userId = Convert.ToInt64(myReader[1].ToString());
                         if (deadL <= DateTime.Now)
                         {
                             Connector.Connector.DeleteControlSocData(userId, targId);
@@ -415,11 +419,18 @@ NH3: <i>{WeatherApi.nh3} мкг/м3</i>
                 }
                 #endregion
             }
-
-            catch (Exception eeee)
+            catch (ApiRequestException except)
+            {
+                Console.WriteLine(except);
+                if(except.Message == "chat not found")
+                {
+                    Cleaner.DeleteChatData(chatId);
+                }    
+            }
+            catch (MySqlException eeee)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Error with db!\n" + eeee);
+                Console.WriteLine("Error with db!\n" + eeee.Message);
                 Console.ForegroundColor = ConsoleColor.White;
             }
         }
@@ -546,7 +557,7 @@ NH3: <i>{WeatherApi.nh3} мкг/м3</i>
 
                 if (msg.Photo != null)
                 {
-                    if (msg.Chat.Id == fbaNews & msg.From.Id == channel)
+                    if (msg.Chat.Id == fbaNews && msg.From.Id == channel)
                     {
                         try
                         {
@@ -571,8 +582,16 @@ NH3: <i>{WeatherApi.nh3} мкг/м3</i>
                             sqlReader1 = sqlCommand1.ExecuteReader();
                             while (sqlReader1.Read())
                             {
-                                await client.SendPhotoAsync(Convert.ToInt64(sqlReader1[0]), photo: photo, caption: $"<b>📬Говорит <a href=\"https://t.me/FBA_Studio\">FBA Studio</a>:</b>\n<i>{news}</i>", ParseMode.Html, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithUrl("Посетить канал", "https://t.me/FBA_Studio")));
-                                Thread.Sleep(1500);
+                                try
+                                {
+                                    await client.SendPhotoAsync(Convert.ToInt64(sqlReader1[0]), photo: photo, caption: $"<b>📬Говорит <a href=\"https://t.me/FBA_Studio\">FBA Studio</a>:</b>\n<i>{news}</i>", ParseMode.Html, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithUrl("Посетить канал", "https://t.me/FBA_Studio")));
+                                    Thread.Sleep(1500);
+                                }
+                                catch (ApiRequestException exception)
+                                {
+                                    Console.WriteLine(exception.Message);
+                                    Connector.Connector.DeleteUserBot(Convert.ToInt64(sqlReader1[0]));
+                                }
                             }
                         }
                         catch(Exception er)
@@ -623,8 +642,16 @@ NH3: <i>{WeatherApi.nh3} мкг/м3</i>
                             sqlReader1 = sqlCommand1.ExecuteReader();
                             while (sqlReader1.Read())
                             {
-                                await client.SendVideoAsync(chatId: Convert.ToInt64(sqlReader1[0]), video: video, caption: $"<b>📬Говорит <a href=\"https://t.me/FBA_Studio\">FBA Studio</a>:</b>\n<i>{news}</i>", parseMode: ParseMode.Html, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithUrl("Посетить канал", "https://t.me/FBA_Studio")));
-                                Thread.Sleep(1500);
+                                try
+                                {
+                                    await client.SendVideoAsync(chatId: Convert.ToInt64(sqlReader1[0]), video: video, caption: $"<b>📬Говорит <a href=\"https://t.me/FBA_Studio\">FBA Studio</a>:</b>\n<i>{news}</i>", parseMode: ParseMode.Html, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithUrl("Посетить канал", "https://t.me/FBA_Studio")));
+                                    Thread.Sleep(1500);
+                                }
+                                catch (ApiRequestException exception)
+                                {
+                                    Console.WriteLine(exception.Message);
+                                    Connector.Connector.DeleteUserBot(Convert.ToInt64(sqlReader1[0]));
+                                }
                             }
                         }
                         catch(Exception er)
@@ -675,8 +702,16 @@ NH3: <i>{WeatherApi.nh3} мкг/м3</i>
                             sqlReader1 = sqlCommand1.ExecuteReader();
                             while (sqlReader1.Read())
                             {
-                                await client.SendAudioAsync(Convert.ToInt64(sqlReader1[0]), audio, $"<b>📬Говорит <a href=\"https://t.me/FBA_Studio\">FBA Studio</a>:</b>\n<i>{news}</i>", ParseMode.Html, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithUrl("Посетить канал", "https://t.me/FBA_Studio")));
-                                Thread.Sleep(1500);
+                                try
+                                {
+                                    await client.SendAudioAsync(Convert.ToInt64(sqlReader1[0]), audio, $"<b>📬Говорит <a href=\"https://t.me/FBA_Studio\">FBA Studio</a>:</b>\n<i>{news}</i>", ParseMode.Html, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithUrl("Посетить канал", "https://t.me/FBA_Studio")));
+                                    Thread.Sleep(1500);
+                                }
+                                catch (ApiRequestException exception)
+                                {
+                                    Console.WriteLine(exception.Message);
+                                    Connector.Connector.DeleteUserBot(Convert.ToInt64(sqlReader1[0]));
+                                }
                             }
                         }
                         catch(Exception err)
@@ -698,6 +733,124 @@ NH3: <i>{WeatherApi.nh3} мкг/м3</i>
                     {
                         return;
                     }
+                }
+
+                if (msg.Sticker != null)
+                {
+                    if(msg.ReplyToMessage != null && msg.Chat.Id != msg.From.Id)
+                        switch (msg.Sticker.Emoji)
+                        {
+                            case "👍":
+                                {
+                                    if (msg.ReplyToMessage.From.Id == msg.From.Id)
+                                    {
+                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://user?id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, а у вас, как я вижу, высокая самооценка😏", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                                    }
+                                    else
+                                    {
+                                        Connector.Connector.GetControlSocData(msg.From.Id, msg.ReplyToMessage.From.Id);
+                                        if (Connector.Connector.message == "don't rate")
+                                        {
+                                            Connector.Connector.GetSocialData(msg.ReplyToMessage.From.Id);
+                                            if (Connector.Connector.message == "not rated")
+                                            {
+                                                Connector.Connector.CreateSocialData(msg.ReplyToMessage.From.Id, 1);
+                                                Connector.Connector.CreateControlSocData(msg.From.Id, msg.ReplyToMessage.From.Id, 1, DateTime.Now.AddDays(1));
+                                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://user?id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a> соглашается с участником <a href = \"tg://user?id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a>✅\n\nСоциальный рейтинг: 1", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                                            }
+                                            else
+                                            {
+                                                Connector.Connector.CreateControlSocData(msg.From.Id, msg.ReplyToMessage.From.Id, 1, DateTime.Now.AddDays(1));
+                                                var rating = Connector.Connector.user_rating + 1;
+                                                Connector.Connector.UpdateSocialData(msg.ReplyToMessage.From.Id, rating);
+                                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://user?id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a> соглашается с участником <a href = \"tg://user?id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a>✅\n\nСоциальный рейтинг: {rating}📊", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Connector.Connector.GetSocialData(msg.ReplyToMessage.From.Id);
+                                            if (Connector.Connector.message == "not rated")
+                                            {
+                                                Connector.Connector.CreateSocialData(msg.ReplyToMessage.From.Id, 1);
+                                                Connector.Connector.CreateControlSocData(msg.From.Id, msg.ReplyToMessage.From.Id, 1, DateTime.Now.AddDays(1));
+                                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://user?id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a> соглашается с участником <a href = \"tg://user?id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a>✅\n\nСоциальный рейтинг: 1", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                                            }
+                                            else
+                                            {
+                                                Connector.Connector.GetControlSocData(msg.From.Id, msg.ReplyToMessage.From.Id);
+                                                if (Connector.Connector.count_control >= 4)
+                                                {
+                                                    await client.SendTextMessageAsync(msg.Chat.Id, $"🚫Вы уже исчерпали лимит оценивания <b>{msg.ReplyToMessage.From.FirstName}</b>\n⏱Дата сброса лимита: {Connector.Connector.soc_control}", ParseMode.Html);
+                                                }
+                                                else
+                                                {
+                                                    var control = Connector.Connector.count_control + 1;
+                                                    Connector.Connector.UpdateControlSocData(msg.From.Id, msg.ReplyToMessage.From.Id, control, DateTime.Now.AddDays(1));
+                                                    var rating = Connector.Connector.user_rating + 1;
+                                                    Connector.Connector.UpdateSocialData(msg.ReplyToMessage.From.Id, rating);
+                                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://user?id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a> соглашается с участником <a href = \"tg://user?id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a>✅\n\nСоциальный рейтинг: {rating}📊", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    break;
+                                }
+                            case "👎":
+                                {
+                                    if (msg.ReplyToMessage.From.Id == msg.From.Id)
+                                    {
+                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://user?id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a>, зачем себя так унижать😕", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                                    }
+                                    else
+                                    {
+                                        Connector.Connector.GetControlSocData(msg.From.Id, msg.ReplyToMessage.From.Id);
+                                        if (Connector.Connector.message == "don't rate")
+                                        {
+                                            Connector.Connector.GetSocialData(msg.ReplyToMessage.From.Id);
+                                            if (Connector.Connector.message == "not rated")
+                                            {
+                                                Connector.Connector.CreateSocialData(msg.ReplyToMessage.From.Id, -1);
+                                                Connector.Connector.CreateControlSocData(msg.From.Id, msg.ReplyToMessage.From.Id, 1, DateTime.Now.AddDays(1));
+                                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://user?id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a> не соглашается с участником <a href = \"tg://user?id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a>💢\n\nСоциальный рейтинг: -1", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                                            }
+                                            else
+                                            {
+                                                Connector.Connector.CreateControlSocData(msg.From.Id, msg.ReplyToMessage.From.Id, 1, DateTime.Now.AddDays(1));
+                                                var rating = Connector.Connector.user_rating - 1;
+                                                Connector.Connector.UpdateSocialData(msg.ReplyToMessage.From.Id, rating);
+                                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://user?id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a> не соглашается с участником <a href = \"tg://user?id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a>💢\n\nСоциальный рейтинг: {rating}📊", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Connector.Connector.GetSocialData(msg.ReplyToMessage.From.Id);
+                                            if (Connector.Connector.message == "not rated")
+                                            {
+                                                Connector.Connector.CreateSocialData(msg.ReplyToMessage.From.Id, -1);
+                                                Connector.Connector.CreateControlSocData(msg.From.Id, msg.ReplyToMessage.From.Id, 1, DateTime.Now.AddDays(1));
+                                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://user?id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a> не соглашается с участником <a href = \"tg://user?id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a>💢\n\nСоциальный рейтинг: -1", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                                            }
+                                            else
+                                            {
+                                                Connector.Connector.GetControlSocData(msg.From.Id, msg.ReplyToMessage.From.Id);
+                                                if (Connector.Connector.count_control >= 4)
+                                                {
+                                                    await client.SendTextMessageAsync(msg.Chat.Id, $"🚫Вы уже исчерпали лимит оценивания <b>{msg.ReplyToMessage.From.FirstName}</b>\n⏱Дата сброса лимита: {Connector.Connector.soc_control}", ParseMode.Html);
+                                                }
+                                                else
+                                                {
+                                                    var control = Connector.Connector.count_control + 1;
+                                                    Connector.Connector.UpdateControlSocData(msg.From.Id, msg.ReplyToMessage.From.Id, control, DateTime.Now.AddDays(1));
+                                                    var rating = Connector.Connector.user_rating - 1;
+                                                    Connector.Connector.UpdateSocialData(msg.ReplyToMessage.From.Id, rating);
+                                                    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"<a href = \"tg://user?id={msg.From.Id}\">{msg.From.FirstName} {msg.From.LastName}</a> не соглашается с участником <a href = \"tg://user?id={msg.ReplyToMessage.From.Id}\">{msg.ReplyToMessage.From.FirstName} {msg.ReplyToMessage.From.LastName}</a>💢\n\nСоциальный рейтинг: {rating}📊", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    break;
+                                }
+                        }
                 }
 
                 if (msg.Document != null)
@@ -727,8 +880,16 @@ NH3: <i>{WeatherApi.nh3} мкг/м3</i>
                             sqlReader1 = sqlCommand1.ExecuteReader();
                             while (sqlReader1.Read())
                             {
-                                await client.SendDocumentAsync(Convert.ToInt64(sqlReader1[0]), document, $"<b>📬Говорит <a href=\"https://t.me/FBA_Studio\">FBA Studio</a>:</b>\n<i>{news}</i>", parseMode: ParseMode.Html, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithUrl("Посетить канал", "https://t.me/FBA_Studio")));
-                                Thread.Sleep(1500);
+                                try
+                                {
+                                    await client.SendDocumentAsync(Convert.ToInt64(sqlReader1[0]), document, $"<b>📬Говорит <a href=\"https://t.me/FBA_Studio\">FBA Studio</a>:</b>\n<i>{news}</i>", parseMode: ParseMode.Html, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithUrl("Посетить канал", "https://t.me/FBA_Studio")));
+                                    Thread.Sleep(1500);
+                                }
+                                catch (ApiRequestException exception)
+                                {
+                                    Console.WriteLine(exception.Message);
+                                    Connector.Connector.DeleteUserBot(Convert.ToInt64(sqlReader1[0]));
+                                }
                             }
                         }
                         catch (Exception errrr)
@@ -952,13 +1113,21 @@ NH3: <i>{WeatherApi.nh3} мкг/м3</i>
                                 sqlReader1 = sqlCommand1.ExecuteReader();
                                 while (sqlReader1.Read())
                                 {
-                                    await client.SendTextMessageAsync(Convert.ToInt64(sqlReader1[0]), $"<b>📬Говорит <a href=\"https://t.me/FBA_Studio\">FBA Studio</a>:</b>\n<i>{news}</i>", ParseMode.Html, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithUrl("Посетить канал", "https://t.me/FBA_Studio")), disableWebPagePreview: true);
-                                    Thread.Sleep(1500);
+                                    try
+                                    {
+                                        await client.SendTextMessageAsync(Convert.ToInt64(sqlReader1[0]), $"<b>📬Говорит <a href=\"https://t.me/FBA_Studio\">FBA Studio</a>:</b>\n<i>{news}</i>", ParseMode.Html, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithUrl("Посетить канал", "https://t.me/FBA_Studio")), disableWebPagePreview: true);
+                                        Thread.Sleep(1500);
+                                    }
+                                    catch(ApiRequestException exception)
+                                    {
+                                        Console.WriteLine(exception.Message);
+                                        Connector.Connector.DeleteUserBot(Convert.ToInt64(sqlReader1[0]));
+                                    }
                                 }
                             }
                             catch(Exception err)
                             {
-                                Console.WriteLine(e);
+                                Console.WriteLine(err);
                             }
                         }
                         else if(msg.From.Id == channel)
@@ -1169,6 +1338,11 @@ NH3: <i>{WeatherApi.nh3} мкг/м3</i>
                                     if (username.EndsWith(' '))
                                         username = username.Split(' ')[0];
                                     var target = await MessageParser.GetUserIdByUsernameAsync(username, token);
+                                    if (target == null)
+                                    {
+                                        await client.SendTextMessageAsync(msg.Chat.Id, "⚠️Возникла ошибка Telegram API для проверки пользователя по Юзернейму, повторите попытку позже!");
+                                        return;
+                                    }
                                     var targetId = Convert.ToInt64(target[0]);
                                     var firstName = target[1].ToString();
 
@@ -4739,6 +4913,7 @@ NH3: <i>{WeatherApi.nh3} мкг/м3</i>
                                     }
                                 }
                             }
+
                             //RP commands
                             if (msg.Text.StartsWith("+"))
                             {
@@ -5079,7 +5254,7 @@ NH3: <i>{WeatherApi.nh3} мкг/м3</i>
                                     }
                                     else
                                     {
-                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, text: $"<b>❗Права, необходимые для модерировани бота:</b>\n\n<i>-измененния прав участников чата</i>\n<i>-удаление участников из чата</i>\n<i>-удаление чужих сообщений</i>\n<i>Изменения разрешений чата</i>", parseMode: ParseMode.Html, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithUrl("Добавить бота в группу", "http://t.me/Laura_cm_bot?startgroup=start&admin=change_info+restrict_members+delete_messages+pin_messages+invite_users")));
+                                        await client.SendTextMessageAsync(chatId: msg.Chat.Id, text: $"<b>❗Права, необходимые для модерировани бота:</b>\n\n<i>-измененния прав участников чата</i>\n<i>-удаление участников из чата</i>\n<i>-удаление чужих сообщений</i>\n<i>Изменения разрешений чата</i>", parseMode: ParseMode.Html, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithUrl("Добавить бота в группу", "http://t.me/Laura_cm_bot?startgroup=Laura&admin=change_info+restrict_members+delete_messages+pin_messages+invite_users")));
                                         break;
                                     }
 
@@ -5272,18 +5447,18 @@ NH3: <i>{WeatherApi.nh3} мкг/м3</i>
                             }
 
                             //Random user (in Dev)
-                            if (msg.Text.ToLower().StartsWith("лаура кто сегодня "))
-                            {
-                                var splitter = msg.Text.Split(' ');
-                                var SplitPredictPhrase = msg.Text.Split($"{splitter[0]} {splitter[1]} {splitter[2]} ");
-                                var PredictPhrase = SplitPredictPhrase[1];
+                            //if (msg.Text.ToLower().StartsWith("лаура кто сегодня "))
+                            //{
+                            //    var splitter = msg.Text.Split(' ');
+                            //    var SplitPredictPhrase = msg.Text.Split($"{splitter[0]} {splitter[1]} {splitter[2]} ");
+                            //    var PredictPhrase = SplitPredictPhrase[1];
 
-                                String[] botText = { "🔮Шар ясно показывает, что", "🌌Легенды гласят, что", "💡Один мудрец гласит, что", "👨‍💻Один из сотрудников FBA говорит, что" };
-                                Random random_botText = new Random();
-                                var user = await MessageParser.GetRandomMemberAsync(msg.Chat.Id, token, msg.Chat.Type, msg.MessageId);
+                            //    String[] botText = { "🔮Шар ясно показывает, что", "🌌Легенды гласят, что", "💡Один мудрец гласит, что", "👨‍💻Один из сотрудников FBA говорит, что" };
+                            //    Random random_botText = new Random();
+                            //    var user = await MessageParser.GetRandomMemberAsync(msg.Chat.Id, token, msg.Chat.Type, msg.MessageId);
 
-                                await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"{botText[random_botText.Next(botText.Length)]} <a href = \"tg://user?id={user[1]}\">{user[0]}</a> сегодня {PredictPhrase}", parseMode: ParseMode.Html, disableWebPagePreview: true);
-                            }
+                            //    await client.SendTextMessageAsync(chatId: msg.Chat.Id, $"{botText[random_botText.Next(botText.Length)]} <a href = \"tg://user?id={user[1]}\">{user[0]}</a> сегодня {PredictPhrase}", parseMode: ParseMode.Html, disableWebPagePreview: true);
+                            //}
 
                             if ((msg.Text.Contains("чат") | msg.Text.Contains("Чат")) & (msg.Text.Contains("умер") | msg.Text.Contains("Умер") | msg.Text.Contains("сдох") | msg.Text.Contains("Сдох")))
                             {
