@@ -37,10 +37,10 @@ namespace Laura_Bot_Chat_Manager
         private static long fbaNews = -1001562946820;
         private static DateTime timeOfStart = DateTime.Now;
 
-        private static string host { get; set; } = "185.252.147.37";
-        private static string user { get; set; } = "lance";
-        private static string passwrd { get; set; } = "V1oletIsTop!";
-        private static string database { get; set; } = "lance_db";
+        private static string host { get; set; } = "host";
+        private static string user { get; set; } = "user";
+        private static string passwrd { get; set; } = "password";
+        private static string database { get; set; } = "database";
 
         private static string conn { get; set; } = $"server={host};user={user};database={database};password={passwrd}";
 
