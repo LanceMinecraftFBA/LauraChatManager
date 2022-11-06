@@ -10,6 +10,7 @@ NuGet packages/class:
 - Functions(class)
 - AIClass(class/in dev)
 - Connector(class, MySql requests)
+- BotData(class)
 
 Languages:
 - Russian
