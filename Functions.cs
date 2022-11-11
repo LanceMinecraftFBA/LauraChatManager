@@ -81,13 +81,21 @@ namespace Functions
             return data;
         }
 
-        public static async Task<object[]> GetUserIdByUsernameAsync(string username, string token)
+        public static async Task<object[]> GetUserIdByUsernameAsync(string username, string token, Client client)
         {
-            Client client = new Client(api_id, api_hash);
-            await client.LoginBotIfNeeded(token);
-            var user = await client.Contacts_ResolveUsername(username);
-            object[] userData = {user.User.id, user.User.first_name};
-            return userData;
+            try
+            {
+                await client.LoginBotIfNeeded(token);
+                var user = await client.Contacts_ResolveUsername(username);
+                object[] userData = { user.User.id, user.User.first_name };
+                await client.Auth_LogOut();
+                return userData;
+            }
+            catch(Exception exc)
+            {
+                Console.WriteLine(exc);
+                return null;
+            }
         }
     }
     public class CapchaButtons
